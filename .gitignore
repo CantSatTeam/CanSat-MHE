@@ -1,0 +1,5 @@
+.venv/
+.vscode/
+/augment_pipeline/input_images/
+/augment_pipeline/output/
+__pycache__/
