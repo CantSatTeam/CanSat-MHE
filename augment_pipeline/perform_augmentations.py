@@ -14,13 +14,13 @@ def perform_augmentation(augmentation_type: str, image_name: str, seed: int):
 
     # apply augmentation
     augment_output = None
-    if augmentation_type == "blur":
+    if augmentation_type == "motion_blur":
         augment_output = apply_blur(input_image, seed)
     elif augmentation_type == "quality":
         augment_output = apply_quality(input_image, seed)
     else:
         # ! is this even how you do error descriptions in python
-        raise ValueError("augmentation_type is not in [\"blur\", \"quality\"]")
+        raise ValueError("augmentation_type is not in [\"motion_blur\", \"quality\"]")
 
     # log seed
     augment_output.log_data["seed"] = seed
@@ -34,7 +34,7 @@ def perform_augmentation(augmentation_type: str, image_name: str, seed: int):
         json.dump(augment_output.log_data, f, indent=4)
 
 if __name__ == "__main__":
-    augmentation_type = "blur"
+    augmentation_type = "motion_blur"
     image_name = "1"
     seed = random.randrange(0, 2**32)
     perform_augmentation(augmentation_type, image_name, seed)

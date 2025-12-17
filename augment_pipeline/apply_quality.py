@@ -48,7 +48,7 @@ def apply_quality(input_image: Image, seed: int) -> AugmentOutput:
     return AugmentOutput(
         output_image = output_image,
         log_data = {
-            "augmentation": "quality_degradation",
+            "augmentation": "quality",
             "version": "1",
             "scale_factor": scale_factor,
             "noise_sd": noise_sigma,
