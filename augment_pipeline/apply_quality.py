@@ -1,10 +1,7 @@
 from PIL import Image
-import random, json, os, numpy, io
+import random, numpy, io
 
 from augment_output import AugmentOutput
-
-INPUT_PATH = "./augment_pipeline/input_images"
-OUTPUT_PATH = "./augment_pipeline/output"
 
 def downscale_upscale(image: Image, scale_factor: float) -> Image:
     new_size = (int(image.width * scale_factor), int(image.height * scale_factor))
@@ -39,13 +36,13 @@ def apply_quality(input_image: Image, seed: int) -> AugmentOutput:
     # get random values
     scale_factor = random.uniform(0.08, 0.15)
     noise_sigma = random.uniform(12, 25)
-    jpeg_severity = random.randint(7, 15)
+    jpeg_quality = random.randint(7, 15)
 
     # apply augmentation
     # output_image = corrupt(numpy.array(input_image), corruption_name="jpeg_compression", severity=jpeg_severity)
     output_image = downscale_upscale(input_image, scale_factor=scale_factor)
     output_image = gaussian_noise(output_image, sigma=noise_sigma)
-    output_image = jpeg_compress(output_image, quality=jpeg_severity)
+    output_image = jpeg_compress(output_image, quality=jpeg_quality)
 
     # return
     return AugmentOutput(
@@ -55,23 +52,6 @@ def apply_quality(input_image: Image, seed: int) -> AugmentOutput:
             "version": "1",
             "scale_factor": scale_factor,
             "noise_sd": noise_sigma,
-            "jpeg_severity": jpeg_severity
+            "jpeg_quality": jpeg_quality
         }
     )
-
-if __name__ == "__main__":
-    seed = random.randrange(0, 2**32)
-
-    name = "1"
-    path = INPUT_PATH + "/" + name + ".jpg"
-    input_image = Image.open(path)
-
-    augment_output = apply_quality(input_image, seed)
-    augment_output.log_data["seed"] = seed
-
-    output_path = OUTPUT_PATH + "/" + name + "/"
-    if not os.path.isdir(output_path):
-        os.makedirs(output_path)
-    augment_output.output_image.save(output_path + "out.jpg")
-    with open(output_path + "log.json", "w") as f:
-        json.dump(augment_output.log_data, f, indent=4)
