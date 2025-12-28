@@ -3,11 +3,12 @@ from PIL import Image
 
 from apply_blur import apply_blur
 from apply_quality import apply_quality
+from apply_cloud import apply_cloud
 
 INPUT_PATH = "./augment_pipeline/input_images"
 OUTPUT_PATH = "./augment_pipeline/output"
 
-def perform_augmentation(augmentation_type: str, image_name: str, seed: int):
+def perform_augmentation(augmentation_type: str, image_name: str, seed: int) -> None:
     # open input image
     path = INPUT_PATH + "/" + image_name + ".jpg"
     input_image = Image.open(path)
@@ -18,9 +19,11 @@ def perform_augmentation(augmentation_type: str, image_name: str, seed: int):
         augment_output = apply_blur(input_image, seed)
     elif augmentation_type == "quality":
         augment_output = apply_quality(input_image, seed)
+    elif augmentation_type == "cloud":
+        augment_output = apply_cloud(input_image, seed)
     else:
         # ! is this even how you do error descriptions in python
-        raise ValueError("augmentation_type is not in [\"motion_blur\", \"quality\"]")
+        raise ValueError("augmentation_type is not in [\"motion_blur\", \"quality\", \"cloud\"]")
 
     # log seed
     augment_output.log_data["seed"] = seed
@@ -34,7 +37,7 @@ def perform_augmentation(augmentation_type: str, image_name: str, seed: int):
         json.dump(augment_output.log_data, f, indent=4)
 
 if __name__ == "__main__":
-    augmentation_type = "motion_blur"
+    augmentation_type = "cloud"
     image_name = "1"
     seed = random.randrange(0, 2**32)
     perform_augmentation(augmentation_type, image_name, seed)
