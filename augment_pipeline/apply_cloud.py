@@ -62,7 +62,7 @@ def fog(x, severity0, severity1):
     mapsize = 2 ** math.ceil(math.log2(max(x.shape[0], x.shape[1])))
     width = x.shape[1]
     height = x.shape[0]
-    x += plasma_fractal(wibbledecay=c[1], mapsize=mapsize)[:height, :width][..., numpy.newaxis]
+    x += c[0] * plasma_fractal(wibbledecay=c[1], mapsize=mapsize)[:height, :width][..., numpy.newaxis]
     return numpy.clip(x * max_val / (max_val + c[0]), 0, 1) * 255
 
 def apply_cloud(input_image: Image, seed: int) -> AugmentOutput:
@@ -71,11 +71,9 @@ def apply_cloud(input_image: Image, seed: int) -> AugmentOutput:
     numpy.random.seed(seed)
 
     # get random values
-    # severity0 = random.uniform(0.2, 1.5)
-    # severity1 = random.uniform(1.75, 3.0)
-    lerpAmount = random.uniform(0.2, 1)
-    severity0 = 0.2 + lerpAmount * (1.5 - 0.2)
-    severity1 = 3.0 - lerpAmount * (3.0 - 1.75)
+
+    severity0 = random.uniform(0.4, 1.5)
+    severity1 = random.uniform(1.3, 1.6)
 
     # thing
     numpy_input_image = numpy.array(input_image)
@@ -87,8 +85,8 @@ def apply_cloud(input_image: Image, seed: int) -> AugmentOutput:
         output_image = cloud_image,
         log_data = {
             "augmentation": "cloud_overlay",
-            "version": "1",
-            "lerpAmount": lerpAmount,
+            "version": "1.1",
+            # "lerpAmount": lerpAmount,
             "severity0": severity0,
             "severity1": severity1
         }
