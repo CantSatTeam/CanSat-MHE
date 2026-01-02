@@ -10,8 +10,8 @@ def apply_blur(input_image: Image, seed: int) -> AugmentOutput:
     numpy.random.seed(seed) # for motion_blur.Kernel
 
     # get random values
-    kernel_size = random.randint(15, 45)
-    intensity = random.uniform(0, 0.7)
+    kernel_size = random.randint(12, 17)
+    intensity = random.uniform(0, 0.4)
 
     # apply augmentation
     kernel = Kernel(size = (kernel_size, kernel_size), intensity = intensity)

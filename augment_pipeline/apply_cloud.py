@@ -71,9 +71,8 @@ def apply_cloud(input_image: Image, seed: int) -> AugmentOutput:
     numpy.random.seed(seed)
 
     # get random values
-
     severity0 = random.uniform(0.4, 1.5)
-    severity1 = random.uniform(1.3, 1.6)
+    severity1 = random.uniform(1.25, 1.5)
 
     # thing
     numpy_input_image = numpy.array(input_image)

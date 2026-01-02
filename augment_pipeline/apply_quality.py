@@ -34,8 +34,8 @@ def apply_quality(input_image: Image, seed: int) -> AugmentOutput:
     numpy.random.seed(seed)
 
     # get random values
-    scale_factor = random.uniform(0.08, 0.15)
-    noise_sigma = random.uniform(12, 25)
+    scale_factor = random.uniform(0.10, 0.17)
+    noise_sigma = random.uniform(20, 40)
     jpeg_quality = random.randint(7, 15)
 
     # apply augmentation
