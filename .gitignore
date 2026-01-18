@@ -3,3 +3,5 @@
 /augment_pipeline/input_images/
 /augment_pipeline/output/
 __pycache__/
+.ignore/
+*.tif
