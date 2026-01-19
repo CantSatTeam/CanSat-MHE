@@ -5,3 +5,4 @@
 __pycache__/
 .ignore/
 *.tif
+data_split_dirs/

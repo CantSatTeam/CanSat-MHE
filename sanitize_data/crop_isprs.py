@@ -70,7 +70,7 @@ def process_image_gdal(img_path, is_label=False):
     return slices, slice_geotransforms, projection
 
 # Directories
-dirs = ['image', 'dsm']
+dirs = ['raw_image', 'raw_dsm']
 new_dirs = ['image_cropped', 'dsm_cropped']
 
 # Create new directories for slices
