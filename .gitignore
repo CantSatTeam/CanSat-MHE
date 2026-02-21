@@ -1,4 +1,5 @@
 .venv/
+venv/
 .vscode/
 /scripts/augment_pipeline/input_images/
 /scripts/augment_pipeline/output/

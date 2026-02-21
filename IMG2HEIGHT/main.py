@@ -34,10 +34,10 @@ if __name__ == '__main__':
     src_start = datetime.datetime.now()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train_image_file',  default="../D_data/dataset/train/image/", type=str)
-    parser.add_argument('--train_label_file',  default="../D_data/dataset/train/dsm/", type=str)
-    parser.add_argument('--test_image_file', default="../D_data/dataset/test/image/", type=str)
-    parser.add_argument('--test_label_file', default="../D_data/dataset/test/dsm/", type=str)
+    parser.add_argument('--train_image_file',  default="../data/train/image/", type=str)
+    parser.add_argument('--train_label_file',  default="../data/train/dsm/", type=str)
+    parser.add_argument('--test_image_file', default="../data/test/image/", type=str)
+    parser.add_argument('--test_label_file', default="../data/test/dsm/", type=str)
 
     parser.add_argument('--num_channels', type=int, default=3)
     parser.add_argument('--num_classes', type=int, default=1)
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=123)
     args = parser.parse_args()
     '''
-    设置模型、损失函数和优化器
+    Set up the model, loss function, and optimizer.
     '''
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = Resnet50()
