@@ -5,8 +5,9 @@ from apply_blur import apply_blur
 from apply_quality import apply_quality
 from apply_cloud import apply_cloud
 
-INPUT_PATH = "./augment_pipeline/input_images"
-OUTPUT_PATH = "./augment_pipeline/output"
+DATA_PATH = "../data/"
+INPUT_PATH = DATA_PATH + "augment/input"
+OUTPUT_PATH = DATA_PATH + "augment/output"
 
 def perform_augmentation(augmentation_type: str, image_name: str, seed: int) -> None:
     # open input image
