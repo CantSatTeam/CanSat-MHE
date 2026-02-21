@@ -1,6 +1,5 @@
 """
-Download matching Sentinel-2 RGB for DSM/DEM tile GeoTIFFs produced by
-slice_dsm_fixed_area.py.
+Download matching Sentinel-2 RGB for DSM/DEM tile GeoTIFFs produced by slice.py
 
 Defaults:
   input_dir  = ../data/dsm/output      (DSM tiles)
@@ -35,7 +34,7 @@ import numpy as np
 from PIL import Image
 
 
-DEFAULT_INPUT_DIR = Path("../data/dsm/output")
+DEFAULT_INPUT_DIR = Path("../data/dsm/input")
 DEFAULT_OUTPUT_DIR = Path("../data/dsm/output")
 
 SATELLITE_SR = "COPERNICUS/S2_SR_HARMONIZED"
@@ -55,8 +54,15 @@ def parse_args(argv: list[str]) -> dict:
     maxcloud = 30.0
     pattern = "*_tile_*.tif"
     skip_existing = True
+    specific_file = None
 
     i = 1
+
+    # If first argument exists and is not a flag, treat it as a specific DSM tile filename
+    if i < len(argv) and not argv[i].startswith("--"):
+        specific_file = argv[i]
+        i += 1
+
     while i < len(argv):
         a = argv[i]
         if a == "--input_dir":
@@ -91,6 +97,7 @@ def parse_args(argv: list[str]) -> dict:
         "maxcloud": maxcloud,
         "pattern": pattern,
         "skip_existing": skip_existing,
+        "specific_file": specific_file,
     }
 
 
@@ -231,9 +238,18 @@ def main() -> None:
     # Initialize EE once
     ee.Initialize()
 
-    tiles = sorted(input_dir.glob(pattern))
+    specific_file = args["specific_file"]
+
+    if specific_file is not None:
+        tile_path = input_dir / specific_file
+        if not tile_path.exists():
+            raise FileNotFoundError(f"{tile_path} not found")
+        tiles = [tile_path]
+    else:
+        tiles = sorted(input_dir.glob(pattern))
+
     if not tiles:
-        raise RuntimeError(f"No tiles found in {input_dir} matching pattern {pattern!r}")
+        raise RuntimeError(f"No tiles found in {input_dir}")
 
     print(f"[INFO] Found {len(tiles)} tile(s)")
 

@@ -52,10 +52,11 @@ def parse_args(argv: list[str]) -> dict:
     tile_size_m = 1000.0
     overlap_m = 0.0
     specific_file = None
+    single_mode = False  # NEW
 
     i = 1
 
-    # If first argument exists and is not a flag, treat it as DSM filename
+    # positional filename still supported
     if i < len(argv) and not argv[i].startswith("--"):
         specific_file = argv[i]
         i += 1
@@ -74,11 +75,11 @@ def parse_args(argv: list[str]) -> dict:
         elif a == "--overlap_m":
             overlap_m = float(argv[i + 1])
             i += 2
+        elif a == "--single":     # BOOLEAN FLAG
+            single_mode = True
+            i += 1
         else:
             raise ValueError(f"Unknown arg: {a}")
-
-    if overlap_m < 0 or overlap_m >= tile_size_m:
-        raise ValueError("overlap_m must be in [0, tile_size_m).")
 
     return {
         "input_dir": input_dir.resolve(),
@@ -86,6 +87,7 @@ def parse_args(argv: list[str]) -> dict:
         "tile_size_m": tile_size_m,
         "overlap_m": overlap_m,
         "specific_file": specific_file,
+        "single_mode": single_mode,
     }
 
 
@@ -166,12 +168,55 @@ def tile_one_raster(in_path: Path, out_dir: Path, tile_size_m: float, overlap_m:
     return written
 
 
+def crop_single_tile(in_path: Path, out_dir: Path, tile_size_m: float) -> Path:
+    """
+    Crops a single tile (tile_size_m x tile_size_m) centered on the dataset.
+    Returns output path.
+    """
+    utm_srs = compute_utm_for_dataset(in_path)
+    xmin, ymin, xmax, ymax = dataset_bounds_in_utm(in_path, utm_srs)
+
+    # Center in UTM meters
+    cx = (xmin + xmax) / 2.0
+    cy = (ymin + ymax) / 2.0
+
+    half = tile_size_m / 2.0
+
+    x0 = cx - half
+    x1 = cx + half
+    y0 = cy - half
+    y1 = cy + half
+
+    stem = in_path.stem
+    out_tile = out_dir / f"{stem}_single_{int(tile_size_m)}m.tif"
+
+    print(f"\n[INFO] Cropping SINGLE tile from: {in_path.name}")
+    print(f"[INFO] CRS: {utm_srs}")
+    print(f"[INFO] Crop bounds: xmin={x0:.2f}, ymin={y0:.2f}, xmax={x1:.2f}, ymax={y1:.2f}")
+
+    run([
+        "gdalwarp",
+        "-t_srs", utm_srs,
+        "-te", str(x0), str(y0), str(x1), str(y1),
+        "-r", "bilinear",
+        "-ot", "Float32",
+        "-dstnodata", "0",
+        "-overwrite",
+        str(in_path),
+        str(out_tile),
+    ])
+
+    print(f"[DONE] Wrote single tile: {out_tile}")
+    return out_tile
+
+
 def main() -> None:
     args = parse_args(sys.argv)
     input_dir: Path = args["input_dir"]
     output_dir: Path = args["output_dir"]
     tile_size_m: float = args["tile_size_m"]
     overlap_m: float = args["overlap_m"]
+    single_mode: bool = args.get("single_mode", False)  # NEW
 
     if not input_dir.exists():
         raise FileNotFoundError(f"Input dir not found: {input_dir}")
@@ -180,6 +225,7 @@ def main() -> None:
 
     specific_file = args["specific_file"]
 
+    # Build list of input tifs (same as you have now)
     if specific_file is not None:
         tif_path = input_dir / specific_file
         if not tif_path.exists():
@@ -191,12 +237,20 @@ def main() -> None:
     if not tifs:
         raise RuntimeError(f"No .tif/.tiff files found in {input_dir}")
 
-    total_tiles = 0
-    for tif in tifs:
-        total_tiles += tile_one_raster(tif, output_dir, tile_size_m, overlap_m)
-
-    print(f"\n[ALL DONE] Total tiles written: {total_tiles}")
-    print(f"[ALL DONE] Output dir: {output_dir}")
+    # NEW: switch behavior based on single_mode
+    if single_mode:
+        written = 0
+        for tif in tifs:
+            crop_single_tile(tif, output_dir, tile_size_m)  # writes ONE tif per input
+            written += 1
+        print(f"\n[ALL DONE] Wrote {written} single crop(s)")
+        print(f"[ALL DONE] Output dir: {output_dir}")
+    else:
+        total_tiles = 0
+        for tif in tifs:
+            total_tiles += tile_one_raster(tif, output_dir, tile_size_m, overlap_m)
+        print(f"\n[ALL DONE] Total tiles written: {total_tiles}")
+        print(f"[ALL DONE] Output dir: {output_dir}")
 
 
 if __name__ == "__main__":
