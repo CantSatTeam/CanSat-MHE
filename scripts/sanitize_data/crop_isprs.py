@@ -15,6 +15,8 @@ palette = {
     (255, 0, 0): 5       # Clutter/background
 }
 
+slice_size = 256
+
 def convert_label(img):
     single_channel_label = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
     for key, value in palette.items():
@@ -46,7 +48,6 @@ def process_image_gdal(img_path, is_label=False):
         img = img[np.newaxis, ...]  # Add channel dimension back
 
     height, width = img.shape[1], img.shape[2]
-    slice_size = 256
 
     # Calculate number of slices and step for overlap
     num_slices_height = (height - 1) // slice_size + 1
@@ -107,7 +108,7 @@ for dir_idx, dir_name in enumerate(dirs):
             if idx == 0:  # Log first slice details
                 print(f"[DEBUG] Slice {idx}: shape={slice_img.shape}, dtype={slice_img.dtype}, min={slice_img.min()}, max={slice_img.max()}")
 
-            out_ds = driver.Create(os.path.join(new_dirs[dir_idx], slice_filename), 512, 512, channels, data_type)
+            out_ds = driver.Create(os.path.join(new_dirs[dir_idx], slice_filename), slice_size, slice_size, channels, data_type)
             out_ds.SetGeoTransform(geotransform)
             out_ds.SetProjection(projection)
 

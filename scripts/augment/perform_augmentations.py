@@ -50,7 +50,7 @@ def test_augmentation_n_times(augmentation_type: str, image_name: str, n: int) -
         json.dump(log, open(test_output_path + f"log_{i}.json", "w"), indent=4)
 
 if __name__ == "__main__":
-    augmentation_type = "quality"
+    augmentation_type = "motion_blur"
     image_name = "1"
     seed = random.randrange(0, 2**32)
     # perform_augmentation(augmentation_type, image_name, seed)
