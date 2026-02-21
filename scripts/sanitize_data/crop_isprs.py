@@ -23,8 +23,16 @@ def convert_label(img):
     return single_channel_label
 
 def process_image_gdal(img_path, is_label=False):
+    print(f"\n[DEBUG] Processing: {img_path}")
     ds = gdal.Open(img_path)
+    print(f"[DEBUG] GDAL dataset opened. Checking file size...")
+    print(f"[DEBUG] RasterXSize: {ds.RasterXSize}, RasterYSize: {ds.RasterYSize}, BandCount: {ds.RasterCount}")
+    
     img = ds.ReadAsArray()
+    print(f"[DEBUG] ReadAsArray() completed. Image shape: {img.shape if img is not None else 'None'}")
+    if img is not None:
+        print(f"[DEBUG] Data type: {img.dtype}, Min: {img.min()}, Max: {img.max()}")
+    
     original_geotransform = ds.GetGeoTransform()
     projection = ds.GetProjection()
 
@@ -38,13 +46,16 @@ def process_image_gdal(img_path, is_label=False):
         img = img[np.newaxis, ...]  # Add channel dimension back
 
     height, width = img.shape[1], img.shape[2]
-    slice_size = 512
+    slice_size = 256
 
     # Calculate number of slices and step for overlap
     num_slices_height = (height - 1) // slice_size + 1
     num_slices_width = (width - 1) // slice_size + 1
     step_height = (height - slice_size) // (num_slices_height - 1) if num_slices_height > 1 else slice_size
     step_width = (width - slice_size) // (num_slices_width - 1) if num_slices_width > 1 else slice_size
+    
+    print(f"[DEBUG] Image dimensions: {height}x{width}")
+    print(f"[DEBUG] Will create {num_slices_height} x {num_slices_width} = {num_slices_height * num_slices_width} slices")
 
     slices = []
     slice_geotransforms = []
@@ -80,16 +91,21 @@ for new_dir in new_dirs:
 
 # Iterate through each directory and process images
 for dir_idx, dir_name in enumerate(dirs):
+    print(f"\n[DEBUG] Processing directory: {dir_name}")
     for filename in os.listdir(dir_name):
         img_path = os.path.join(dir_name, filename)
         slices, slice_geotransforms, projection = process_image_gdal(img_path, is_label=False)
 
         # Save slices
+        print(f"[DEBUG] Saving {len(slices)} slices...")
         for idx, (slice_img, geotransform) in enumerate(zip(slices, slice_geotransforms)):
             slice_filename = f"{filename.split('.')[0]}_slice_{idx}.tif"
             driver = gdal.GetDriverByName('GTiff')
             data_type = gdal.GDT_Float32 if dir_name == dirs[1] else gdal.GDT_Byte
             channels = slice_img.shape[0]
+            
+            if idx == 0:  # Log first slice details
+                print(f"[DEBUG] Slice {idx}: shape={slice_img.shape}, dtype={slice_img.dtype}, min={slice_img.min()}, max={slice_img.max()}")
 
             out_ds = driver.Create(os.path.join(new_dirs[dir_idx], slice_filename), 512, 512, channels, data_type)
             out_ds.SetGeoTransform(geotransform)

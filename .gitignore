@@ -1,8 +1,13 @@
 .venv/
 .vscode/
-/augment_pipeline/input_images/
-/augment_pipeline/output/
+/scripts/augment_pipeline/input_images/
+/scripts/augment_pipeline/output/
 __pycache__/
 .ignore/
 *.tif
 data_split_dirs/
+/HTC-DC-Net/
+*.png
+*/img2height-venv/
+/D_data/
+*.log
