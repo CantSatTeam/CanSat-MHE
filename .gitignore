@@ -10,7 +10,7 @@ data_split_dirs/
 /HTC-DC-Net/
 *.png
 */img2height-venv/
-/D_data/
+/data/
 *.log
 img2heightvenv/
 datavenv/

@@ -29,49 +29,18 @@ nir = arr[:,:,0].astype(np.float32) / 255.0
 red = arr[:,:,1].astype(np.float32) / 255.0
 green = arr[:,:,2].astype(np.float32) / 255.0
 
-print("Creating all 6 blue synthesis methods...\n")
+print("Creating Inverse NIR blue band...\n")
 
-# All 6 blue synthesis methods
-blue_method1 = np.clip(green - np.maximum(0, nir - red) * 0.5, 0, 1)
-
+# Inverse NIR
 veg_index = (nir - red) / (nir + red + 1e-6)
 blue_method2 = np.clip(green * (1 - veg_index * 0.3), 0, 1)
 
-blue_method3 = np.clip(green * 0.9 - red * 0.1, 0, 1)
+img_array = np.stack([red, green, blue_method2], axis=2)
 
-ratio = red / (green + 1e-6)
-blue_method4 = np.clip(green / (1 + ratio * 0.5), 0, 1)
+fig, ax = plt.subplots(figsize=(12, 12))
+ax.imshow(np.clip(img_array, 0, 1))
+ax.axis('off')
+fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
-blue_method5 = np.clip(green * 0, 0, 1)
-
-blue_method6 = np.minimum(red, green)
-
-methods = [
-    np.stack([red, green, blue_method1], axis=2),
-    np.stack([red, green, blue_method2], axis=2),
-    np.stack([red, green, blue_method3], axis=2),
-    np.stack([red, green, blue_method4], axis=2),
-    np.stack([red, green, blue_method5], axis=2),
-    np.stack([red, green, blue_method6], axis=2),
-]
-
-titles = [
-    "NIR-Constrained",
-    "Inverse NIR (CHOSEN)",
-    "Histogram-Match",
-    "Red-Green Ratio",
-    "Blue = 0",
-    "Min(R,G)"
-]
-
-fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-
-for idx, (img_array, title) in enumerate(zip(methods, titles)):
-    ax = axes[idx // 3, idx % 3]
-    ax.imshow(np.clip(img_array, 0, 1))
-    ax.set_title(title, fontsize=12, fontweight='bold')
-    ax.axis('off')
-
-plt.tight_layout()
-plt.savefig("output_raw_dataset_preview.png", dpi=100, bbox_inches='tight')
+plt.savefig("output_raw_dataset_preview.png", dpi=100, bbox_inches='tight', pad_inches=0)
 print(f"Saved raw dataset preview (25% scale) to output_raw_dataset_preview.png")
