@@ -11,3 +11,5 @@ data_split_dirs/
 */img2height-venv/
 /D_data/
 *.log
+img2heightvenv/
+datavenv/
