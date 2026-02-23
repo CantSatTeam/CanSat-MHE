@@ -32,7 +32,8 @@ opts = parser.parse_args()
 
 
 torch.manual_seed(opts.seed)
-torch.cuda.manual_seed(opts.seed)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(opts.seed)
 
 # Load experiment setting
 config = get_config(opts.config)
@@ -48,15 +49,16 @@ trainer = UNIT_Trainer(config)
 
 
 try:
-    state_dict = torch.load(opts.checkpoint)
+    state_dict = torch.load(opts.checkpoint, map_location=torch.device('cpu'))
     trainer.gen_a.load_state_dict(state_dict['a'])
     trainer.gen_b.load_state_dict(state_dict['b'])
 except:
-    state_dict = pytorch03_to_pytorch04(torch.load(opts.checkpoint))
+    state_dict = pytorch03_to_pytorch04(torch.load(opts.checkpoint, map_location=torch.device('cpu')))
     trainer.gen_a.load_state_dict(state_dict['a'])
     trainer.gen_b.load_state_dict(state_dict['b'])
 
-trainer.cuda()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+trainer.to(device)
 trainer.eval()
 encode = trainer.gen_a.encode if opts.a2b else trainer.gen_b.encode # encode function
 decode = trainer.gen_b.decode if opts.a2b else trainer.gen_a.decode # decode function
@@ -65,10 +67,12 @@ decode = trainer.gen_b.decode if opts.a2b else trainer.gen_a.decode # decode fun
 # Start testing
 for i, (images, names) in enumerate(zip(data_loader, image_names)):
     print(names[1])
-    images = Variable(images.cuda(), volatile=True)
-    content, _ = encode(images)
+    
+    with torch.no_grad():
+        images = images.to(device)
+        content, _ = encode(images)
+        outputs = decode(content)
 
-    outputs = decode(content)
     outputs = (outputs + 1) / 2.
     # path = os.path.join(opts.output_folder, 'input{:03d}_output{:03d}.jpg'.format(i, j))
     basename = os.path.basename(names[1])
