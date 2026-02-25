@@ -143,4 +143,5 @@ images/
 *.pt
 
 uimg2dsm/results/outputs/
-# uimg2dsm/checkpoints/
+imele/data
+imele/checkpoints/Block0_skip_model_110.pth.tar
