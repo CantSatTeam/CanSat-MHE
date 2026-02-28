@@ -4,7 +4,6 @@ __pycache__/
 *.tif
 data_split_dirs/
 /HTC-DC-Net/
-*.png
 *.log
 dataset/
 
