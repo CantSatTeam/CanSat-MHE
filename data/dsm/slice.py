@@ -1,12 +1,16 @@
 """
-Slice (tile) a large DEM/DSM GeoTIFF into fixed physical-area square tiles.
+Slice a large DEM/DSM GeoTIFF into fixed-size square tiles defined by:
+
+  - pixel dimensions (tile_px x tile_px)
+  - target ground sample distance / resolution (gsd meters per pixel)
 
 Defaults:
   input_dir  = ../data/dsm/input
   output_dir = ../data/dsm/output
 
 Each tile:
-  - is tile_size_m x tile_size_m meters on the ground
+  - is tile_px x tile_px pixels
+  - is written at exactly `gsd` meters / pixel
   - is georeferenced (GeoTransform + Projection)
   - is written in a projected CRS (UTM) so sizes are truly metric
 
@@ -15,8 +19,9 @@ Outputs:
 
 Usage:
   python slice.py
-  python slice.py --tile_size_m 1000
-  python slice.py --input_dir ../data/dsm/input --output_dir ../data/dsm/output --tile_size_m 1000 --overlap_m 200
+  python slice.py --tile_px 1024 --gsd 0.5
+  python slice.py --input_dir ../data/dsm/input --output_dir ../data/dsm/output --tile_px 1024 --gsd 0.5 --overlap_px 128
+  python slice.py my_raster.tif --single --tile_px 1024 --gsd 0.5
 
 Notes:
   - Requires GDAL CLI: gdalwarp
@@ -46,13 +51,18 @@ def utm_epsg_from_lonlat(lon: float, lat: float) -> int:
     return (32600 + zone) if lat >= 0 else (32700 + zone)
 
 
+def snap_down(value: float, step: float) -> float:
+    return math.floor(value / step) * step
+
+
 def parse_args(argv: list[str]) -> dict:
     input_dir = DEFAULT_INPUT_DIR
     output_dir = DEFAULT_OUTPUT_DIR
-    tile_size_m = 1000.0
-    overlap_m = 0.0
+    tile_px = 1024
+    overlap_px = 0
+    gsd = 1.0
     specific_file = None
-    single_mode = False  # NEW
+    single_mode = False
 
     i = 1
 
@@ -69,23 +79,36 @@ def parse_args(argv: list[str]) -> dict:
         elif a == "--output_dir":
             output_dir = Path(argv[i + 1])
             i += 2
-        elif a == "--tile_size_m":
-            tile_size_m = float(argv[i + 1])
+        elif a == "--tile_px":
+            tile_px = int(argv[i + 1])
             i += 2
-        elif a == "--overlap_m":
-            overlap_m = float(argv[i + 1])
+        elif a == "--overlap_px":
+            overlap_px = int(argv[i + 1])
             i += 2
-        elif a == "--single":     # BOOLEAN FLAG
+        elif a == "--gsd":
+            gsd = float(argv[i + 1])
+            i += 2
+        elif a == "--single":
             single_mode = True
             i += 1
         else:
             raise ValueError(f"Unknown arg: {a}")
 
+    if tile_px <= 0:
+        raise ValueError("--tile_px must be > 0")
+    if gsd <= 0:
+        raise ValueError("--gsd must be > 0")
+    if overlap_px < 0:
+        raise ValueError("--overlap_px must be >= 0")
+    if overlap_px >= tile_px:
+        raise ValueError("--overlap_px must be smaller than --tile_px")
+
     return {
         "input_dir": input_dir.resolve(),
         "output_dir": output_dir.resolve(),
-        "tile_size_m": tile_size_m,
-        "overlap_m": overlap_m,
+        "tile_px": tile_px,
+        "overlap_px": overlap_px,
+        "gsd": gsd,
         "specific_file": specific_file,
         "single_mode": single_mode,
     }
@@ -117,36 +140,44 @@ def dataset_bounds_in_utm(tif_path: Path, utm_srs: str) -> tuple[float, float, f
     return xmin, ymin, xmax, ymax
 
 
-def tile_one_raster(in_path: Path, out_dir: Path, tile_size_m: float, overlap_m: float) -> int:
+def tile_one_raster(in_path: Path, out_dir: Path, tile_px: int, overlap_px: int, gsd: float) -> int:
+    """
+    Tile raster into exact tile_px x tile_px tiles at the requested gsd.
+    """
     utm_srs = compute_utm_for_dataset(in_path)
     xmin, ymin, xmax, ymax = dataset_bounds_in_utm(in_path, utm_srs)
 
-    step = tile_size_m - overlap_m
+    tile_size_m = tile_px * gsd
+    step_px = tile_px - overlap_px
+    step_m = step_px * gsd
 
     # Deterministic grid alignment
-    gx0 = math.floor(xmin / step) * step
-    gy0 = math.floor(ymin / step) * step
+    gx0 = snap_down(xmin, step_m)
+    gy0 = snap_down(ymin, step_m)
 
-    ncols = int(math.ceil((xmax - gx0) / step))
-    nrows = int(math.ceil((ymax - gy0) / step))
+    ncols = int(math.ceil((xmax - gx0) / step_m))
+    nrows = int(math.ceil((ymax - gy0) / step_m))
 
     stem = in_path.stem
     print(f"\n[INFO] Tiling: {in_path.name}")
     print(f"[INFO] CRS: {utm_srs}")
-    print(f"[INFO] Tile size: {tile_size_m} m, overlap: {overlap_m} m (step={step} m)")
-    print(f"[INFO] UTM bounds: xmin={xmin:.2f}, ymin={ymin:.2f}, xmax={xmax:.2f}, ymax={ymax:.2f}")
+    print(f"[INFO] Tile size: {tile_px} px x {tile_px} px")
+    print(f"[INFO] GSD: {gsd} m/px")
+    print(f"[INFO] Overlap: {overlap_px} px (step={step_px} px / {step_m} m)")
+    print(f"[INFO] Ground tile size: {tile_size_m} m x {tile_size_m} m")
+    print(f"[INFO] UTM bounds: xmin={xmin:.3f}, ymin={ymin:.3f}, xmax={xmax:.3f}, ymax={ymax:.3f}")
     print(f"[INFO] Grid: {nrows} rows x {ncols} cols")
 
     written = 0
     for r in range(nrows):
         for c in range(ncols):
-            x0 = gx0 + c * step
-            y0 = gy0 + r * step
+            x0 = gx0 + c * step_m
+            y0 = gy0 + r * step_m
             x1 = x0 + tile_size_m
             y1 = y0 + tile_size_m
 
             # Skip tiles fully outside
-            if x1 < xmin or x0 > xmax or y1 < ymin or y0 > ymax:
+            if x1 <= xmin or x0 >= xmax or y1 <= ymin or y0 >= ymax:
                 continue
 
             out_tile = out_dir / f"{stem}_tile_{r:04d}_{c:04d}.tif"
@@ -154,7 +185,8 @@ def tile_one_raster(in_path: Path, out_dir: Path, tile_size_m: float, overlap_m:
             run([
                 "gdalwarp",
                 "-t_srs", utm_srs,
-                "-te", str(x0), str(y0), str(x1), str(y1),
+                "-te", f"{x0:.12f}", f"{y0:.12f}", f"{x1:.12f}", f"{y1:.12f}",
+                "-tr", f"{gsd:.12f}", f"{gsd:.12f}",
                 "-r", "bilinear",
                 "-ot", "Float32",
                 "-dstnodata", "0",
@@ -168,36 +200,38 @@ def tile_one_raster(in_path: Path, out_dir: Path, tile_size_m: float, overlap_m:
     return written
 
 
-def crop_single_tile(in_path: Path, out_dir: Path, tile_size_m: float) -> Path:
+def crop_single_tile(in_path: Path, out_dir: Path, tile_px: int, gsd: float) -> Path:
     """
-    Crops a single tile (tile_size_m x tile_size_m) centered on the dataset.
-    Returns output path.
+    Crops a single tile (tile_px x tile_px) centered on the dataset.
     """
     utm_srs = compute_utm_for_dataset(in_path)
     xmin, ymin, xmax, ymax = dataset_bounds_in_utm(in_path, utm_srs)
+
+    tile_size_m = tile_px * gsd
 
     # Center in UTM meters
     cx = (xmin + xmax) / 2.0
     cy = (ymin + ymax) / 2.0
 
-    half = tile_size_m / 2.0
-
-    x0 = cx - half
-    x1 = cx + half
-    y0 = cy - half
-    y1 = cy + half
+    x0 = snap_down(cx - tile_size_m / 2.0, gsd)
+    y0 = snap_down(cy - tile_size_m / 2.0, gsd)
+    x1 = x0 + tile_size_m
+    y1 = y0 + tile_size_m
 
     stem = in_path.stem
-    out_tile = out_dir / f"{stem}_single_{int(tile_size_m)}m.tif"
+    out_tile = out_dir / f"{stem}_single_{tile_px}px_{str(gsd).replace('.', 'p')}mpp.tif"
 
     print(f"\n[INFO] Cropping SINGLE tile from: {in_path.name}")
     print(f"[INFO] CRS: {utm_srs}")
-    print(f"[INFO] Crop bounds: xmin={x0:.2f}, ymin={y0:.2f}, xmax={x1:.2f}, ymax={y1:.2f}")
+    print(f"[INFO] Tile size: {tile_px} px x {tile_px} px")
+    print(f"[INFO] GSD: {gsd} m/px")
+    print(f"[INFO] Crop bounds: xmin={x0:.3f}, ymin={y0:.3f}, xmax={x1:.3f}, ymax={y1:.3f}")
 
     run([
         "gdalwarp",
         "-t_srs", utm_srs,
-        "-te", str(x0), str(y0), str(x1), str(y1),
+        "-te", f"{x0:.12f}", f"{y0:.12f}", f"{x1:.12f}", f"{y1:.12f}",
+        "-tr", f"{gsd:.12f}", f"{gsd:.12f}",
         "-r", "bilinear",
         "-ot", "Float32",
         "-dstnodata", "0",
@@ -214,9 +248,10 @@ def main() -> None:
     args = parse_args(sys.argv)
     input_dir: Path = args["input_dir"]
     output_dir: Path = args["output_dir"]
-    tile_size_m: float = args["tile_size_m"]
-    overlap_m: float = args["overlap_m"]
-    single_mode: bool = args.get("single_mode", False)  # NEW
+    tile_px: int = args["tile_px"]
+    overlap_px: int = args["overlap_px"]
+    gsd: float = args["gsd"]
+    single_mode: bool = args["single_mode"]
 
     if not input_dir.exists():
         raise FileNotFoundError(f"Input dir not found: {input_dir}")
@@ -225,7 +260,7 @@ def main() -> None:
 
     specific_file = args["specific_file"]
 
-    # Build list of input tifs (same as you have now)
+    # Build list of input tifs
     if specific_file is not None:
         tif_path = input_dir / specific_file
         if not tif_path.exists():
@@ -237,18 +272,17 @@ def main() -> None:
     if not tifs:
         raise RuntimeError(f"No .tif/.tiff files found in {input_dir}")
 
-    # NEW: switch behavior based on single_mode
     if single_mode:
         written = 0
         for tif in tifs:
-            crop_single_tile(tif, output_dir, tile_size_m)  # writes ONE tif per input
+            crop_single_tile(tif, output_dir, tile_px, gsd)
             written += 1
         print(f"\n[ALL DONE] Wrote {written} single crop(s)")
         print(f"[ALL DONE] Output dir: {output_dir}")
     else:
         total_tiles = 0
         for tif in tifs:
-            total_tiles += tile_one_raster(tif, output_dir, tile_size_m, overlap_m)
+            total_tiles += tile_one_raster(tif, output_dir, tile_px, overlap_px, gsd)
         print(f"\n[ALL DONE] Total tiles written: {total_tiles}")
         print(f"[ALL DONE] Output dir: {output_dir}")
 
