@@ -14,14 +14,52 @@ from scipy.stats import pearsonr
 def cal_psnr(img1, img2):
     return 10. * torch.log10(1. / torch.mean((img1 - img2) ** 2))
 
-def cal_ssim(img1,img2):
-    ssim_list=[]
+def cal_ssim(img1, img2):
+    """
+    img1, img2: torch tensors shaped [B, C, H, W], typically C=1
+    Returns: mean SSIM over batch
+    """
+    ssim_list = []
+
     for i in range(img1.shape[0]):
-        x=img1[i][:].cpu().numpy().transpose(1,2,0).astype('float32')
-        y=img2[i][:].cpu().numpy().transpose(1,2,0).astype('float32')
-        ssim,diff=compare_ssim(x, y, full=True,multichannel=True)
-        ssim_list.append(ssim)
-    return np.mean(ssim_list)
+        # [C,H,W] -> numpy
+        x = img1[i].detach().cpu().numpy().astype(np.float32)
+        y = img2[i].detach().cpu().numpy().astype(np.float32)
+
+        # If single-channel, convert to [H,W]
+        if x.shape[0] == 1:
+            x2 = x[0]
+            y2 = y[0]
+
+            # Put on comparable scale:
+            # label appears to be 0..255; normalize it to 0..1
+            y2 = y2 / 255.0
+
+            # Normalize output to 0..1 (safer than assuming a scale)
+            x_min, x_max = float(x2.min()), float(x2.max())
+            if x_max > x_min:
+                x2 = (x2 - x_min) / (x_max - x_min)
+            else:
+                x2 = x2 * 0.0
+
+            score = compare_ssim(x2, y2, data_range=1.0)
+
+        else:
+            # Multi-channel case: [C,H,W] -> [H,W,C]
+            x2 = np.transpose(x, (1, 2, 0))
+            y2 = np.transpose(y, (1, 2, 0))
+
+            # If these are images (e.g., 0..1 floats), set data_range accordingly.
+            # Here we compute it from y2 to be safe.
+            dr = float(y2.max() - y2.min())
+            if dr == 0:
+                dr = 1.0
+
+            score = compare_ssim(x2, y2, channel_axis=-1, data_range=dr)
+
+        ssim_list.append(score)
+
+    return float(np.mean(ssim_list))
 def cal_mae(img1, img2):
 	mae_list=[]
 	for i in range(img1.shape[0]):

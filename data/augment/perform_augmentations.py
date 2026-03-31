@@ -5,26 +5,28 @@ from apply_blur import apply_blur
 from apply_quality import apply_quality
 from apply_cloud import apply_cloud
 
-DATA_PATH = "../data/"
-INPUT_PATH = DATA_PATH + "augment/input"
-OUTPUT_PATH = DATA_PATH + "augment/output"
+DATA_PATH = "./test-dataset"
+INPUT_PATH = DATA_PATH + "/input"
+OUTPUT_PATH = DATA_PATH + "/output"
 
-def perform_augmentation(augmentation_type: str, image_name: str, seed: int) -> None:
-    # open input image
-    path = INPUT_PATH + "/" + image_name + ".jpg"
-    input_image = Image.open(path)
-
-    # apply augmentation
-    augment_output = None
+def apply_augmentation(augmentation_type: str, input_image: Image, seed: int) -> Image:
     if augmentation_type == "motion_blur":
-        augment_output = apply_blur(input_image, seed)
+        return apply_blur(input_image, seed)
     elif augmentation_type == "quality":
-        augment_output = apply_quality(input_image, seed)
+        return apply_quality(input_image, seed)
     elif augmentation_type == "cloud":
-        augment_output = apply_cloud(input_image, seed)
+        return apply_cloud(input_image, seed)
     else:
         # ! is this even how you do error descriptions in python
         raise ValueError("augmentation_type is not in [\"motion_blur\", \"quality\", \"cloud\"]")
+
+def perform_augmentation(augmentation_type: str, image_name: str, seed: int) -> None:
+    # open input image
+    path = INPUT_PATH + "/" + image_name + ".png"
+    input_image = Image.open(path)
+
+    # apply augmentation
+    augment_output = apply_augmentation(augmentation_type, input_image, seed)
 
     # log seed
     augment_output.log_data["seed"] = seed
@@ -49,9 +51,51 @@ def test_augmentation_n_times(augmentation_type: str, image_name: str, n: int) -
         log = json.load(open(OUTPUT_PATH + "/" + image_name + "/log.json"))
         json.dump(log, open(test_output_path + f"log_{i}.json", "w"), indent=4)
 
+ASSIGNED_AUGMENTATIONS_PATH = "./test-dataset/augmentation-assignments.json"
+BATCH_INPUT = "../../dataset/validation/image"
+BATCH_OUTPUT = "../../dataset/validation-augment/image"
+BATCH_INIT_SEED = 67
+
+def batch_augmentations():
+    assignments = None
+    with open(ASSIGNED_AUGMENTATIONS_PATH, 'r') as f:
+        assignments = json.load(f)
+
+    if not os.path.isdir(BATCH_OUTPUT):
+        os.makedirs(BATCH_OUTPUT)
+
+    seed = BATCH_INIT_SEED
+    total_processed = 0
+
+    for aug_type, image_list in assignments.items():
+        print(f"Processing {len(image_list)} images for '{aug_type}'")
+
+        for image_name in image_list:
+            input_path = os.path.join(BATCH_INPUT, image_name)
+            input_image = Image.open(input_path)
+            
+            output_image = None
+            if aug_type == "none":
+                output_image = input_image
+            else:
+                actual_aug_type = aug_type
+                augment_output = apply_augmentation(actual_aug_type, input_image, seed)
+                output_image = augment_output.output_image
+                seed += 1
+            
+            output_path = os.path.join(BATCH_OUTPUT, image_name)
+            output_image.save(output_path)
+            
+            total_processed += 1
+            print(f"\tSaved {image_name}")
+    
+    print(f"\nProcessed {total_processed} images")
+
 if __name__ == "__main__":
-    augmentation_type = "motion_blur"
-    image_name = "1"
+    augmentation_type = "quality"
+    image_name = "image0601"
     seed = random.randrange(0, 2**32)
     # perform_augmentation(augmentation_type, image_name, seed)
     test_augmentation_n_times(augmentation_type, image_name, 10)
+
+    # batch_augmentations()

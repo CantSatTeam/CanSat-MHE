@@ -11,7 +11,11 @@ def plasma_fractal(mapsize=32, wibbledecay=3):
     'mapsize' must be a power of two.
     """
     assert (mapsize & (mapsize - 1) == 0)
+<<<<<<< HEAD
     maparray = numpy.empty((mapsize, mapsize), dtype=numpy.float_)
+=======
+    maparray = numpy.empty((mapsize, mapsize), dtype=numpy.float64)
+>>>>>>> 04fcf27 (Update)
     maparray[0, 0] = 0
     stepsize = mapsize
     wibble = 100
@@ -71,7 +75,13 @@ def apply_cloud(input_image: Image, seed: int) -> AugmentOutput:
     numpy.random.seed(seed)
 
     # get random values
+<<<<<<< HEAD
     severity0 = random.uniform(0.4, 1.5)
+=======
+    # severity0 = random.uniform(0.4, 1.5)
+    severity0 = random.uniform(0.1, 0.4)
+    # severity1 = random.uniform(1.25, 1.5)
+>>>>>>> 04fcf27 (Update)
     severity1 = random.uniform(1.25, 1.5)
 
     # thing

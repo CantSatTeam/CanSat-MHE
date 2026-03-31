@@ -22,7 +22,7 @@ def train_model(model,args,train_dataloader,test_dataloader,
     torch_resize2 = Resize([128, 128])
     torch_resize3 = Resize([64, 64])
     torch_resize4 = Resize([32, 32])
-    for epo in trange(args.num_epochs):
+    for epo in trange(args.epoch, args.num_epochs):
         epoch_start = datetime.datetime.now()
 
         train_loss = 0.0
@@ -111,8 +111,20 @@ def train_model(model,args,train_dataloader,test_dataloader,
             round(train_loss/len(train_dataloader),6),round(eval_loss/len(test_dataloader),6),round(eval_psnr/len(test_dataloader),4),
             round(eval_ssim/len(test_dataloader),4),round(eval_mae/len(test_dataloader),4),round(eval_rmse/len(test_dataloader),4),round(eval_zncc/len(test_dataloader),4)))
 
-        torch.save(model,
-                   "./model/seg={}_train_loss={}_eval_loss={}_eval_psnr={}_eval_ssim={}_eval_mae={}_eval_rmse={}_eval_zncc={}.pkl".
-            format(epo,round(train_loss/len(train_dataloader),6),round(eval_loss / len(test_dataloader),6),
-            round(eval_psnr/len(test_dataloader),4),round(eval_ssim/len(test_dataloader),4),round(eval_mae/len(test_dataloader),4)
-            ,round(eval_rmse/len(test_dataloader),4),round(eval_zncc/len(test_dataloader),4)))
+        os.makedirs(args.ckpt_dir, exist_ok=True)
+
+        ckpt_path = os.path.join(
+            args.ckpt_dir,
+            "seg={}_train_loss={}_eval_loss={}_eval_psnr={}_eval_ssim={}_eval_mae={}_eval_rmse={}_eval_zncc={}.pkl".format(
+                epo,
+                round(train_loss/len(train_dataloader), 6),
+                round(eval_loss/len(test_dataloader), 6),
+                round(eval_psnr/len(test_dataloader), 4),
+                round(eval_ssim/len(test_dataloader), 4),
+                round(eval_mae/len(test_dataloader), 4),
+                round(eval_rmse/len(test_dataloader), 4),
+                round(eval_zncc/len(test_dataloader), 4),
+            )
+        )
+
+        torch.save({"model": model.state_dict(), "epoch": epo}, ckpt_path.replace(".pkl", ".pt"))
