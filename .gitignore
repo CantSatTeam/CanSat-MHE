@@ -4,10 +4,6 @@ __pycache__/
 *.tif
 data_split_dirs/
 /HTC-DC-Net/
-<<<<<<< HEAD
-*.png
-=======
->>>>>>> 2a337c6137da0e46e30930bf8b34d34b765b1d6e
 *.log
 dataset/
 
@@ -159,7 +155,6 @@ data/augment/test-dataset/
 terrainmesh/venv/
 
 imele/
-terrainmesh/
 uimg2dsm/
 
 .vscode/
@@ -308,3 +303,20 @@ images/
 uimg2dsm/results/outputs/
 imele/data
 imele/checkpoints/Block0_skip_model_110.pth.tar
+TEMP/
+
+*/__pycache__/
+*.ipynb
+
+__pycache__/
+checkpoints/
+checkpoints_others/
+
+*.py[cod]
+*$py.class
+
+.DS_Store
+
+visualizations
+
+.vscode
