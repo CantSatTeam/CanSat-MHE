@@ -2,7 +2,7 @@
 Download matching Sentinel-2 RGB for DSM/DEM tile GeoTIFFs produced by slice.py
 
 Defaults:
-  input_dir  = ../data/dsm/output      (DSM tiles)
+  input_dir  = ../data/dsm/input       (DSM tiles)
   output_dir = ../data/dsm/output      (RGB saved alongside tiles by default)
 
 Outputs (for each tile <tile>.tif):
@@ -10,10 +10,10 @@ Outputs (for each tile <tile>.tif):
   <output_dir>/<tile>_rgb.tif          (NOT georeferenced; pixel-aligned only)
 
 Usage:
-  python to_img.py
-  python to_img.py --input_dir ../data/dsm/output --output_dir ../data/dsm/output
-  python to_img.py --start 2023-06-01 --end 2023-09-01 --maxcloud 30
-  python to_img.py --pattern "*_tile_*.tif" --skip_existing 1
+  python img_from_dsm.py
+  python img_from_dsm.py --input_dir ../data/dsm/output --output_dir ../data/dsm/output
+  python img_from_dsm.py --start 2023-06-01 --end 2023-09-01 --maxcloud 30
+  python img_from_dsm.py --pattern "*_tile_*.tif" --skip_existing 1
 
 Notes:
   - Requires Earth Engine auth + project set (ee.Initialize() must work)

@@ -34,18 +34,12 @@ def apply_quality(input_image: Image, seed: int) -> AugmentOutput:
     numpy.random.seed(seed)
 
     # get random values
-<<<<<<< HEAD
-    scale_factor = random.uniform(0.10, 0.17)
-    noise_sigma = random.uniform(20, 40)
-    jpeg_quality = random.randint(7, 15)
-=======
     # scale_factor = random.uniform(0.18, 0.30)
     scale_factor = random.uniform(0.25, 0.50)
     # noise_sigma = random.uniform(8, 12)
     noise_sigma = random.uniform(3, 8)
     # jpeg_quality = random.randint(10, 20)
     jpeg_quality = random.randint(14, 28)
->>>>>>> 04fcf27 (Update)
 
     # apply augmentation
     # output_image = corrupt(numpy.array(input_image), corruption_name="jpeg_compression", severity=jpeg_severity)
