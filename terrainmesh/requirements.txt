@@ -76,7 +76,7 @@ pycparser==3.0
 Pygments==2.20.0
 PyGObject==3.42.1
 PyJWT==2.3.0
-pyparsing==3.3.2
+# pyparsing==3.3.2
 python-apt==2.4.0+ubuntu4.1
 python-dateutil==2.9.0.post0
 PyYAML==5.4.1
