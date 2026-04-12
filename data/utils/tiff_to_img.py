@@ -27,32 +27,45 @@ def is_heightmap(arr: np.ndarray) -> bool:
     return False
 
 
-def convert_heightmap_to_grayscale(arr: np.ndarray) -> Image.Image:
-    """Convert heightmap to normalized grayscale image."""
+def convert_heightmap_to_grayscale(arr: np.ndarray, normalize: bool = False) -> Image.Image:
+    """Convert heightmap to grayscale image, optionally normalizing to 0-255."""
     if len(arr.shape) == 3:
         arr = arr[:, :, 0]
-    
-    # Normalize to 0-255
-    arr_min = arr.min()
-    arr_max = arr.max()
-    
-    if arr_max > arr_min:
-        normalized = ((arr - arr_min) / (arr_max - arr_min) * 255).astype(np.uint8)
+
+    if normalize:
+        arr_min = arr.min()
+        arr_max = arr.max()
+
+        if arr_max > arr_min:
+            arr = ((arr - arr_min) / (arr_max - arr_min) * 255).astype(np.uint8)
+        else:
+            arr = np.zeros_like(arr, dtype=np.uint8)
     else:
-        normalized = np.zeros_like(arr, dtype=np.uint8)
-    
-    return Image.fromarray(normalized, mode='L')
+        arr = np.clip(arr, 0, 255).astype(np.uint8)
+
+    return Image.fromarray(arr, mode='L')
 
 
-def convert_rgb_direct(arr: np.ndarray) -> Image.Image:
+def convert_rgb_direct(arr: np.ndarray, normalize: bool = False) -> Image.Image:
     """
     Convert 3-band RGB TIF directly to RGB image.
+
+    If normalize=True, scale the full array range to 0-255.
+    Otherwise, just clip to 0-255 and cast to uint8.
     """
-    # Just pass through as-is
     if arr.dtype != np.uint8:
-        # Normalize if needed
-        arr = np.clip(arr, 0, 255).astype(np.uint8)
-    
+        if normalize:
+            arr = arr.astype(np.float32)
+            arr_min = arr.min()
+            arr_max = arr.max()
+
+            if arr_max > arr_min:
+                arr = ((arr - arr_min) / (arr_max - arr_min) * 255).astype(np.uint8)
+            else:
+                arr = np.zeros_like(arr, dtype=np.uint8)
+        else:
+            arr = np.clip(arr, 0, 255).astype(np.uint8)
+
     return Image.fromarray(arr, mode='RGB')
 
 
@@ -87,39 +100,45 @@ def convert_irrg_to_rgb(arr: np.ndarray) -> Image.Image:
     return Image.fromarray(rgb, mode='RGB')
 
 
-def convert_tif(tif_path: Path, output_dir: Path, output_format: str = 'png', use_nir: bool = False) -> bool:
+def convert_tif(
+    tif_path: Path,
+    output_dir: Path,
+    output_format: str = 'png',
+    use_nir: bool = False,
+    normalize: bool = False,
+) -> bool:
     """
     Convert a single TIF file to image format.
-    
+
     Returns True on success, False on failure.
     """
     try:
         # Load TIF
         img = Image.open(tif_path)
         arr = np.array(img)
-        
+
         # Determine type and convert
         if is_heightmap(arr):
-            output_img = convert_heightmap_to_grayscale(arr)
+            output_img = convert_heightmap_to_grayscale(arr, normalize=normalize)
         elif len(arr.shape) == 3 and arr.shape[2] == 3:
             if use_nir:
                 output_img = convert_irrg_to_rgb(arr)
             else:
-                output_img = convert_rgb_direct(arr)
+                output_img = convert_rgb_direct(arr, normalize=normalize)
         else:
             print(f"WARNING: Unknown format for {tif_path.name}: shape={arr.shape}")
             return False
-        
+
         # Save output
         output_path = output_dir / f"{tif_path.stem}.{output_format}"
-        
+
         if output_format == 'jpg':
             output_img.save(output_path, quality=95)
         else:
             output_img.save(output_path)
-        
+
         return True
-        
+
     except Exception as e:
         print(f"ERROR: Failed to convert {tif_path.name}: {e}")
         return False
@@ -158,6 +177,12 @@ def main():
         help='Apply NIR to RGB conversion using vegetation index (for IR-R-G TIFs)'
     )
     
+    parser.add_argument(
+        '--normalize',
+        action='store_true',
+        help='Normalize pixel values to 0-255 before conversion'
+    )
+    
     args = parser.parse_args()
     
     input_dir = Path(args.input_dir)
@@ -188,7 +213,7 @@ def main():
     
     for i, tif_path in enumerate(tif_files, 1):
         print(f"[{i}/{len(tif_files)}] {tif_path.name}...", end=' ')
-        if convert_tif(tif_path, output_dir, args.format, args.nir):
+        if convert_tif(tif_path, output_dir, args.format, args.nir, args.normalize):
             print("OK")
             success_count += 1
         else:

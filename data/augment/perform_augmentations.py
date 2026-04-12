@@ -92,8 +92,8 @@ def batch_augmentations():
     print(f"\nProcessed {total_processed} images")
 
 if __name__ == "__main__":
-    augmentation_type = "quality"
-    image_name = "image0601"
+    augmentation_type = "motion_blur"
+    image_name = "RGB"
     seed = random.randrange(0, 2**32)
     # perform_augmentation(augmentation_type, image_name, seed)
     test_augmentation_n_times(augmentation_type, image_name, 10)

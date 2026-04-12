@@ -41,8 +41,6 @@ import rasterio
 import rasterio.warp
 
 
-DEFAULT_DSM_INPUT_DIR = Path("../data/dsm/input")
-DEFAULT_DSM_OUTPUT_DIR = Path("../data/dsm/output")
 VALID_SUFFIXES = {".tif", ".tiff"}
 EPSILON = 1e-9
 DTYPE_TO_GDAL = {
@@ -168,7 +166,7 @@ def parse_args() -> argparse.Namespace:
         "--input_dir",
         dest="in_dsm",
         type=Path,
-        help="DSM input directory.",
+        help="DSM input GeoTIFF or directory.",
     )
     parser.add_argument(
         "--out_dsm",
@@ -183,7 +181,7 @@ def parse_args() -> argparse.Namespace:
         "--input_rgb_dir",
         dest="in_rgb",
         type=Path,
-        help="RGB input directory.",
+        help="RGB input GeoTIFF or directory.",
     )
     parser.add_argument(
         "--out_rgb",
@@ -228,10 +226,7 @@ def parse_args() -> argparse.Namespace:
         parser.error("--overlap_px must be smaller than --tile_px")
 
     if args.in_dsm is None and args.in_rgb is None:
-        args.in_dsm = DEFAULT_DSM_INPUT_DIR
-
-    if args.out_dsm is None and args.in_dsm is not None and args.in_rgb is None:
-        args.out_dsm = DEFAULT_DSM_OUTPUT_DIR
+        parser.error("Must provide a DSM or RGB input path")
 
     if args.in_rgb is not None and args.out_rgb is None:
         parser.error("--out_rgb / --output_rgb_dir is required when --in_rgb is provided")
@@ -246,7 +241,7 @@ def parse_args() -> argparse.Namespace:
 
     if args.specific_file is not None:
         if args.in_dsm is None:
-            parser.error("The positional filename is only supported for DSM input")
+            parser.error("The positional filename is only supported when --in_dsm is provided")
         if args.in_rgb is not None or args.mode == "paired":
             parser.error(
                 "The positional filename is only supported for the legacy DSM-only workflow"
@@ -255,14 +250,24 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def discover_rasters(input_dir: Path, specific_file: str | None = None) -> list[Path]:
-    if not input_dir.exists():
-        raise FileNotFoundError(f"Input dir not found: {input_dir}")
-    if not input_dir.is_dir():
-        raise NotADirectoryError(f"Input path is not a directory: {input_dir}")
+def discover_rasters(input_path: Path, specific_file: str | None = None) -> list[Path]:
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input path not found: {input_path}")
+
+    if input_path.is_file():
+        if specific_file is not None:
+            raise RuntimeError(
+                "The positional filename cannot be used when --in_dsm points directly to a file"
+            )
+        if input_path.suffix.lower() not in VALID_SUFFIXES:
+            raise RuntimeError(f"File must be a GeoTIFF: {input_path}")
+        return [input_path.resolve()]
+
+    if not input_path.is_dir():
+        raise NotADirectoryError(f"Input path is neither a directory nor a file: {input_path}")
 
     if specific_file is not None:
-        tif_path = (input_dir / specific_file).resolve()
+        tif_path = (input_path / specific_file).resolve()
         if not tif_path.exists():
             raise FileNotFoundError(f"{tif_path} not found")
         if tif_path.suffix.lower() not in VALID_SUFFIXES:
@@ -270,10 +275,10 @@ def discover_rasters(input_dir: Path, specific_file: str | None = None) -> list[
         return [tif_path]
 
     rasters = sorted(
-        p.resolve() for p in input_dir.iterdir() if p.is_file() and p.suffix.lower() in VALID_SUFFIXES
+        p.resolve() for p in input_path.iterdir() if p.is_file() and p.suffix.lower() in VALID_SUFFIXES
     )
     if not rasters:
-        raise RuntimeError(f"No .tif/.tiff files found in {input_dir}")
+        raise RuntimeError(f"No .tif/.tiff files found in {input_path}")
     return rasters
 
 
