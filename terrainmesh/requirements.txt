@@ -16,7 +16,6 @@ dbus-python==1.2.18
 debugpy==1.8.20
 decorator==5.2.1
 distro==1.7.0
-distro-info===1.1build1
 earthengine-api==1.7.12
 executing==2.2.1
 filelock==3.25.2
