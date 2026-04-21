@@ -7,26 +7,10 @@
 *.tif
 *.pt
 dataset/
-data_split_dirs/
 demo_data/
 images/
 lib/
-visualizations/
 TEMP/
-
-uimg2dsm/
-uimg2dsm/results/outputs/
-
-imele/
-imele/data
-imele/checkpoints/Block0_skip_model_110.pth.tar
-
-osiDataset/
-WHU_SparseDepth/
-terrainmeshtests/
-HTC-DC-Net/
-
-data/augment/test-dataset/
 
 # --- Python cache / compiled files ---
 __pycache__/
@@ -55,7 +39,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.img2height-venv/
 .python-version
 
 # --- Packaging / build artifacts ---
@@ -127,4 +110,4 @@ db.sqlite3-journal
 
 # --- Model checkpoints ---
 checkpoints/
-checkpoints_others/
+terrainmesh/pytorch3d/
