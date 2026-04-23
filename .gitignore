@@ -111,3 +111,4 @@ db.sqlite3-journal
 # --- Model checkpoints ---
 checkpoints/
 terrainmesh/pytorch3d/
+pytorch3d
